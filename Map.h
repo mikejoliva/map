@@ -1,161 +1,318 @@
 #ifndef __MAP_H
 #define __MAP_H
 
-class Map
+
+
+namespace ml
 {
-private:
-	// Define the strucutre to be helnd in our array
-	struct pNode
+	template <typename K, typename V>
+	struct Pair
 	{
-		std::string key;
-		int value;
+		K key;
+		V value;
 	};
 
-	pNode* pArray = new pNode;
-	unsigned int pSize = 0;
-
-	void increment(std::string key)
+	class Map
 	{
-		pNode* temp = new pNode[pSize + 1];
-		if (pSize > 0)
+	private:
+		// Define the array that stores our structure
+		Pair<std::string, int>* pArray = new Pair<std::string, int>;
+
+		// Keep track of the size of the array
+		unsigned int pSize = 0;
+
+		// Keep an integer that represents the top of the array
+		unsigned int pTop = 0;
+
+		// Control the maximum size the array can be increased in one go
+		// More efficient for larger maps but will increase memory consumption
+		// Default - 512
+		unsigned int pMaxIncrease = 512;
+
+
+		// Add a new key onto the array, if there is space.
+		void push(std::string key)
 		{
-			for (int idx = 0; idx < pSize; idx++)
+			// Check if our array is full
+			if (pTop == pSize)
 			{
-				temp[idx] = pArray[idx];
+				// Our array is full - let's increase it
+				// To decrease number of times we create a new array, double the size each time.
+				unsigned int newSize = pSize == 0 ? 1 : pSize * 2;
+				// To save memory, only allocate a maximum of maxIncrease (default 512) extra space at a time
+				if (newSize > pMaxIncrease)
+				{
+					newSize = pMaxIncrease;
+				}
+				newSize += pSize;
+
+				Pair<std::string, int>* temp = new Pair<std::string, int>[newSize];
+
+				// Check we have any values to copy
+				if (pTop > 0)
+				{
+					// Copy old values into our new array
+					for (int idx = 0; idx < pTop; idx++)
+					{
+						temp[idx] = pArray[idx];
+					}
+					delete[] pArray;
+				}
+				pArray = temp;
+				pSize = newSize;
+			}
+			// We have space to add new values to our existing array.
+			pArray[pTop].key = key;
+			pArray[pTop].value = NULL;
+			pTop++;
+		}
+
+		
+
+	public:
+
+		template <typename K, typename V>
+		class Iterator
+		{
+		private:
+			Map& pMap;
+			int pIndex = 0;
+		public:
+
+			K first = pMap.pArray[pIndex].key;
+			V second = pMap.pArray[pIndex].value;
+
+			Iterator(Map& map) :pMap(map) { /* Empty */ };
+			Iterator(Map& map, int idx) :pMap(map) 
+			{ 
+				pIndex = idx;
+				first = pMap.pArray[pIndex].key;
+				second = pMap.pArray[pIndex].value;
+			};
+
+			~Iterator() { /*Empty*/ }
+
+			// Operator overloads
+			Iterator& operator++()
+			{
+				// Update our variables
+				pIndex++;
+				first = pMap.pArray[pIndex].key;
+				second = pMap.pArray[pIndex].value;
+
+				return *this;
+			}
+
+			Iterator& operator--()
+			{
+				// Update our variables
+				pIndex--;
+				first = pMap.pArray[pIndex].key;
+				second = pMap.pArray[pIndex].value;
+
+				return *this;
+			}
+
+			inline bool operator==(const Iterator& comp)
+			{
+				return pMap.pArray[pIndex].key == comp.pMap.pArray[comp.pIndex].key &&
+					pMap.pArray[pIndex].value == comp.pMap.pArray[comp.pIndex].value;
+			}
+
+			inline bool operator!=(const Iterator& comp)
+			{
+				return !(pMap.pArray[pIndex].key == comp.pMap.pArray[comp.pIndex].key &&
+					pMap.pArray[pIndex].value == comp.pMap.pArray[comp.pIndex].value);
+			}
+		};
+
+		// Constructors
+		Map() { /* Empty */ };
+
+
+		// Destuctor
+		~Map()
+		{
+			// If we have an array to delete - delete it
+			if (pSize > 0)
+			{
+				delete[] pArray;
+			}
+		};
+
+
+		/////////////////////////////////////////////
+		//  ACCESS ELEMENTS
+		/////////////////////////////////////////////
+
+		// Operator overload to assign a value with []
+		int& operator[](const std::string& key)
+		{
+			if (pSize > 0)
+			{
+				for (int idx = 0; idx < pTop; idx++)
+				{
+					if (pArray[idx].key == key)
+					{
+						return pArray[idx].value;
+					}
+				}
+			}
+			// Key not found
+			push(key);
+			return pArray[pTop - 1].value;
+		}
+
+		// Assign a value with the at function as opposed to []
+		int& at(const std::string& key)
+		{
+			if (pSize > 0)
+			{
+				for (int idx = 0; idx < pTop; idx++)
+				{
+					if (pArray[idx].key == key)
+					{
+						return pArray[idx].value;
+					}
+				}
+			}
+			// Key not found
+			push(key);
+			return pArray[pTop - 1].value;
+		}
+
+		/////////////////////////////////////////////
+		//  Capacity
+		/////////////////////////////////////////////
+
+		// Return the size of the map
+		unsigned int size()
+		{
+			return pSize;
+		}
+
+		// Return the size of the populated map
+		unsigned int top()
+		{
+			return pTop;
+		}
+
+		// Check if the map is empty
+		bool isEmpty()
+		{
+			return pTop == 0;
+		}
+
+		/////////////////////////////////////////////
+		//  Iterators
+		/////////////////////////////////////////////
+
+		// Return the first value
+		Iterator<std::string, int> begin()
+		{
+			return Iterator<std::string, int>(*this, 0);
+		}
+
+		// Return the last value
+		Iterator<std::string, int> end()
+		{
+			return Iterator<std::string, int>(*this, pTop);
+		}
+
+		/////////////////////////////////////////////
+		//  Modifiers
+		/////////////////////////////////////////////
+
+		// Remove all values and keys
+		void clear()
+		{
+			if (pSize == 0) { return; }
+
+			delete[] pArray;
+
+			// Create a new array
+			pArray = new Pair<std::string, int>();
+			pTop = 0;
+			pSize = 0;
+
+		}
+
+		// Removes a key & value pair from the array
+		void remove(std::string key)
+		{
+			if (pSize == 0) { return; }
+
+			Pair<std::string, int>* temp = new Pair<std::string, int>[pSize];
+
+			for (int idx = 0; idx < pTop; idx++)
+			{
+				if (pArray[idx].key != key)
+				{
+					temp[idx] = pArray[idx];
+				}
+				else if (idx != pTop - 1) {
+					idx++;
+					pTop--;
+					temp[idx - 1] = pArray[idx];
+				}
 			}
 			delete[] pArray;
+			pArray = temp;
 		}
-		pArray = temp;
 
-		pArray[pSize].key	 = key;
-		pArray[pSize].value = NULL;
-		pSize++;
-	}
-
-public:
-	Map() {};
-	~Map() 
-	{
-		if (pSize > 0)
+		// Swawp the value of two keys
+		void swap(std::string key1, std::string key2)
 		{
-			delete[] pArray;
+			int temp = at(key1);
+			at(key1) = at(key2);
+			at(key2) = temp;
 		}
-	};
 
-	// Operator overloads
-	int& operator[](const std::string& key)
-	{
-		if (pSize > 0)
+		/////////////////////////////////////////////
+		//  Operations
+		/////////////////////////////////////////////
+
+		// Take the pair struct as an arguments and insert into our array
+		void insert(Pair<std::string, int> newPair)
 		{
-			for (int idx = 0; idx < pSize; idx++)
+			at(newPair.key) = newPair.value;
+		}
+
+		// Insert a new map pair by taking the key and value in their raw form
+		void emplace(std::string key, int value)
+		{
+			at(key) = value;
+		}
+
+		// Insert a new map, if it does not already exist, and return an iterator to it
+		// Otherwise if it does exists, return an iterator to the existing item
+
+
+		// Return an iterator to a given key
+		Iterator<std::string, int> find(std::string key)
+		{
+			for (int idx = 0; idx < pTop; idx++)
 			{
 				if (pArray[idx].key == key)
 				{
-					return pArray[idx].value;
+					return Iterator<std::string, int>(*this, idx);
 				}
 			}
 		}
-		// Key not found
-		increment(key);
-		return pArray[pSize - 1].value;
-	}
 
-	// Return the size of the map
-	unsigned int size()
-	{
-		return pSize;
-	}
-
-	// Return the first value
-	int start()
-	{
-		if (pSize > 0)
+		// Return if a key exists in the map
+		bool exists(std::string key)
 		{
-			return pArray[0].value;
-		}
-		return -1;
-	}
-
-	// Return the last value
-	int end()
-	{
-		if (pSize > 0)
-		{
-			return pArray[pSize - 1].value;
-		}
-		return -1;
-	}
-
-	// Check if the map is empty
-	bool isEmpty()
-	{
-		return pSize == 0;
-	}
-
-	// Sets the value of all keys to null
-	void clear()
-	{
-		for (int idx = 0; idx < pSize; idx++)
-		{
-			pArray[idx].value == NULL;
-		}
-	}
-
-	// Sets the value of one key to null
-	void clear(std::string key)
-	{
-		for (int idx = 0; idx < pSize; idx++)
-		{
-			if (pArray[idx].key == key)
+			for (int idx = 0; idx < pTop; idx++)
 			{
-				pArray[idx].value = NULL;
+				if (pArray[idx].key == key)
+				{
+					return true;
+				}
 			}
+			return false;
 		}
-	}
-
-	// Remove all values and keys
-	void destroy()
-	{
-		if (pSize == 0) { return; }
-
-		delete[] pArray;
-		pSize = 0;
-
-	}
-
-	// Removes a key & value pair from the array
-	void remove(std::string key)
-	{
-		if (pSize == 0) { return; }
-
-		pNode* temp = new pNode[pSize - 1];
-
-		for (int idx = 0; idx < pSize; idx++)
-		{
-			if (pArray[idx].key != key)
-			{
-				temp[idx] = pArray[idx];
-			}
-			else if (idx != pSize - 1) {
-				idx++;
-				pSize--;
-				temp[idx - 1] = pArray[idx];
-			}
-		}
-		delete[] pArray;
-		pArray = temp;
-
-	}
-
-	// Iterated each element and execute passed function
-	template<typename F>
-	void forEach(F func(std::string key, int value, int idx))
-	{
-		for (int idx = 0; idx < pSize; idx++)
-		{
-			func(pArray[idx].key, pArray[idx].value, idx);
-		}
-	}
-};
-
+	
+	};
+}
 #endif
