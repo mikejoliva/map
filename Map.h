@@ -12,11 +12,12 @@ namespace ml
 		V value;
 	};
 
+	template <typename K, typename V>
 	class Map
 	{
 	private:
 		// Define the array that stores our structure
-		Pair<std::string, int>* pArray = new Pair<std::string, int>;
+		Pair<K, V>* pArray = new Pair<K, V>;
 
 		// Keep track of the size of the array
 		unsigned int pSize = 0;
@@ -31,7 +32,7 @@ namespace ml
 
 
 		// Add a new key onto the array, if there is space.
-		void push(std::string key)
+		void push(K key)
 		{
 			// Check if our array is full
 			if (pTop == pSize)
@@ -44,9 +45,9 @@ namespace ml
 				{
 					newSize = pMaxIncrease;
 				}
-				newSize += pSize;
+				pSize += newSize;
 
-				Pair<std::string, int>* temp = new Pair<std::string, int>[newSize];
+				Pair<K, V>* temp = new Pair<K, V>[pSize];
 
 				// Check we have any values to copy
 				if (pTop > 0)
@@ -59,7 +60,6 @@ namespace ml
 					delete[] pArray;
 				}
 				pArray = temp;
-				pSize = newSize;
 			}
 			// We have space to add new values to our existing array.
 			pArray[pTop].key = key;
@@ -146,7 +146,7 @@ namespace ml
 		/////////////////////////////////////////////
 
 		// Operator overload to assign a value with []
-		int& operator[](const std::string& key)
+		V& operator[](const K& key)
 		{
 			if (pSize > 0)
 			{
@@ -164,7 +164,7 @@ namespace ml
 		}
 
 		// Assign a value with the at function as opposed to []
-		int& at(const std::string& key)
+		V& at(K key)
 		{
 			if (pSize > 0)
 			{
@@ -203,20 +203,47 @@ namespace ml
 			return pTop == 0;
 		}
 
+		// Set the array size to the exact size of the map
+		void wrap()
+		{
+			pSize = pTop;
+
+			Pair<K, V>* temp = new Pair<K, V>[pSize];
+
+			// Check we have any values to copy
+			if (pTop > 0)
+			{
+				// Copy old values into our new array
+				for (int idx = 0; idx < pTop; idx++)
+				{
+					temp[idx] = pArray[idx];
+				}
+				delete[] pArray;
+			}
+			pArray = temp;
+		}
+
+
+		// Change the maximum size an array can increase
+		void setMaxIncrease(unsigned int newIncrease)
+		{
+			pMaxIncrease = newIncrease;
+		}
+
 		/////////////////////////////////////////////
 		//  Iterators
 		/////////////////////////////////////////////
 
 		// Return the first value
-		Iterator<std::string, int> begin()
+		Iterator<K, V> begin()
 		{
-			return Iterator<std::string, int>(*this, 0);
+			return Iterator<K, V>(*this, 0);
 		}
 
 		// Return the last value
-		Iterator<std::string, int> end()
+		Iterator<K, V> end()
 		{
-			return Iterator<std::string, int>(*this, pTop);
+			return Iterator<K, V>(*this, pTop);
 		}
 
 		/////////////////////////////////////////////
@@ -231,18 +258,18 @@ namespace ml
 			delete[] pArray;
 
 			// Create a new array
-			pArray = new Pair<std::string, int>();
+			pArray = new Pair<K, V>();
 			pTop = 0;
 			pSize = 0;
 
 		}
 
 		// Removes a key & value pair from the array
-		void remove(std::string key)
+		void remove(K key)
 		{
 			if (pSize == 0) { return; }
 
-			Pair<std::string, int>* temp = new Pair<std::string, int>[pSize];
+			Pair<K, V>* temp = new Pair<K, V>[pSize];
 
 			for (int idx = 0; idx < pTop; idx++)
 			{
@@ -261,7 +288,7 @@ namespace ml
 		}
 
 		// Swawp the value of two keys
-		void swap(std::string key1, std::string key2)
+		void swap(K key1, K key2)
 		{
 			int temp = at(key1);
 			at(key1) = at(key2);
@@ -273,13 +300,13 @@ namespace ml
 		/////////////////////////////////////////////
 
 		// Take the pair struct as an arguments and insert into our array
-		void insert(Pair<std::string, int> newPair)
+		void insert(Pair<K, V> newPair)
 		{
 			at(newPair.key) = newPair.value;
 		}
 
 		// Insert a new map pair by taking the key and value in their raw form
-		void emplace(std::string key, int value)
+		void emplace(K key, V value)
 		{
 			at(key) = value;
 		}
@@ -288,20 +315,21 @@ namespace ml
 		// Otherwise if it does exists, return an iterator to the existing item
 
 
-		// Return an iterator to a given key
-		Iterator<std::string, int> find(std::string key)
+		// Return an iterator to a given key, or the last key if it cannot be found
+		Iterator<K, V> find(K key)
 		{
 			for (int idx = 0; idx < pTop; idx++)
 			{
 				if (pArray[idx].key == key)
 				{
-					return Iterator<std::string, int>(*this, idx);
+					return Iterator<K, V>(*this, idx);
 				}
 			}
+			return end();
 		}
 
 		// Return if a key exists in the map
-		bool exists(std::string key)
+		bool exists(K key)
 		{
 			for (int idx = 0; idx < pTop; idx++)
 			{
