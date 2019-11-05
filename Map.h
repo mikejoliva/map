@@ -8,6 +8,12 @@ namespace ml
 	template <typename K, typename V>
 	struct Pair
 	{
+		Pair() {/* Empty */ }
+		Pair(K key, V value)
+		{
+			this->key = key;
+			this->value = value;
+		}
 		K key;
 		V value;
 	};
@@ -30,6 +36,23 @@ namespace ml
 		// Default - 512
 		unsigned int pMaxIncrease = 512;
 
+
+		V& insert(K key)
+		{
+			if (pSize > 0)
+			{
+				for (int idx = 0; idx < pTop; idx++)
+				{
+					if (pArray[idx].key == key)
+					{
+						return pArray[idx].value;
+					}
+				}
+			}
+			// Key not found
+			push(key);
+			return pArray[pTop - 1].value;
+		}
 
 		// Add a new key onto the array, if there is space.
 		void push(K key)
@@ -67,24 +90,30 @@ namespace ml
 			pTop++;
 		}
 
-		
-
 	public:
 
-		template <typename K, typename V>
 		class Iterator
 		{
 		private:
 			Map& pMap;
 			int pIndex = 0;
+
+			inline bool compare(const Iterator& comp)
+			{
+				return pMap.pArray[pIndex].key == comp.pMap.pArray[comp.pIndex].key &&
+					pMap.pArray[pIndex].value == comp.pMap.pArray[comp.pIndex].value;
+			}
+
+			// Hide the invalid default constructor
+			Iterator() { /* Empty */ }
 		public:
 
 			K first = pMap.pArray[pIndex].key;
 			V second = pMap.pArray[pIndex].value;
 
 			Iterator(Map& map) :pMap(map) { /* Empty */ };
-			Iterator(Map& map, int idx) :pMap(map) 
-			{ 
+			Iterator(Map& map, int idx) :pMap(map)
+			{
 				pIndex = idx;
 				first = pMap.pArray[pIndex].key;
 				second = pMap.pArray[pIndex].value;
@@ -115,14 +144,12 @@ namespace ml
 
 			inline bool operator==(const Iterator& comp)
 			{
-				return pMap.pArray[pIndex].key == comp.pMap.pArray[comp.pIndex].key &&
-					pMap.pArray[pIndex].value == comp.pMap.pArray[comp.pIndex].value;
+				return compare(comp);
 			}
 
 			inline bool operator!=(const Iterator& comp)
 			{
-				return !(pMap.pArray[pIndex].key == comp.pMap.pArray[comp.pIndex].key &&
-					pMap.pArray[pIndex].value == comp.pMap.pArray[comp.pIndex].value);
+				return !compare(comp);
 			}
 		};
 
@@ -146,39 +173,15 @@ namespace ml
 		/////////////////////////////////////////////
 
 		// Operator overload to assign a value with []
-		V& operator[](const K& key)
+		V& operator[](K key)
 		{
-			if (pSize > 0)
-			{
-				for (int idx = 0; idx < pTop; idx++)
-				{
-					if (pArray[idx].key == key)
-					{
-						return pArray[idx].value;
-					}
-				}
-			}
-			// Key not found
-			push(key);
-			return pArray[pTop - 1].value;
+			return insert(key);
 		}
 
 		// Assign a value with the at function as opposed to []
 		V& at(K key)
 		{
-			if (pSize > 0)
-			{
-				for (int idx = 0; idx < pTop; idx++)
-				{
-					if (pArray[idx].key == key)
-					{
-						return pArray[idx].value;
-					}
-				}
-			}
-			// Key not found
-			push(key);
-			return pArray[pTop - 1].value;
+			return insert(key);
 		}
 
 		/////////////////////////////////////////////
@@ -235,15 +238,15 @@ namespace ml
 		/////////////////////////////////////////////
 
 		// Return the first value
-		Iterator<K, V> begin()
+		Iterator begin()
 		{
-			return Iterator<K, V>(*this, 0);
+			return Iterator(*this, 0);
 		}
 
 		// Return the last value
-		Iterator<K, V> end()
+		Iterator end()
 		{
-			return Iterator<K, V>(*this, pTop);
+			return Iterator(*this, pTop);
 		}
 
 		/////////////////////////////////////////////
@@ -269,20 +272,27 @@ namespace ml
 		{
 			if (pSize == 0) { return; }
 
+			if (pTop < pSize / 2 || pTop < pSize - pMaxIncrease)
+			{
+				// pSize is now over twice the size of the needed space OR pTop is less that pSize - pMaxIncrease
+				// Let's save some memory and set pSize back to pTop
+				pSize = pTop;
+			}
+
 			Pair<K, V>* temp = new Pair<K, V>[pSize];
 
-			for (int idx = 0; idx < pTop; idx++)
+			int newIdx = 0;
+			for (int oldIdx = 0; oldIdx < pTop; oldIdx++, newIdx++)
 			{
-				if (pArray[idx].key != key)
+				if (pArray[oldIdx].key != key)
 				{
-					temp[idx] = pArray[idx];
-				}
-				else if (idx != pTop - 1) {
-					idx++;
-					pTop--;
-					temp[idx - 1] = pArray[idx];
+					temp[newIdx] = pArray[oldIdx];
+				} else {
+					newIdx--;
 				}
 			}
+			pTop = newIdx;
+
 			delete[] pArray;
 			pArray = temp;
 		}
@@ -302,13 +312,13 @@ namespace ml
 		// Take the pair struct as an arguments and insert into our array
 		void insert(Pair<K, V> newPair)
 		{
-			at(newPair.key) = newPair.value;
+			insert(newPair.key) = newPair.value;
 		}
 
 		// Insert a new map pair by taking the key and value in their raw form
 		void emplace(K key, V value)
 		{
-			at(key) = value;
+			insert(key) = value;
 		}
 
 		// Insert a new map, if it does not already exist, and return an iterator to it
@@ -316,13 +326,13 @@ namespace ml
 
 
 		// Return an iterator to a given key, or the last key if it cannot be found
-		Iterator<K, V> find(K key)
+		Iterator find(K key)
 		{
 			for (int idx = 0; idx < pTop; idx++)
 			{
 				if (pArray[idx].key == key)
 				{
-					return Iterator<K, V>(*this, idx);
+					return Iterator(*this, idx);
 				}
 			}
 			return end();
