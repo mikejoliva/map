@@ -1,14 +1,12 @@
 #ifndef __MAP_H
 #define __MAP_H
 
-
-
 namespace ml
 {
 	template <typename K, typename V>
 	struct Pair
 	{
-		Pair() {/* Empty */ }
+		Pair() { /* Empty */ }
 		Pair(K key, V value)
 		{
 			this->key = key;
@@ -23,7 +21,7 @@ namespace ml
 	{
 	private:
 		// Define the array that stores our structure
-		Pair<K, V>* pArray = new Pair<K, V>;
+		Pair<K, V>* pArray = new Pair<K, V>();
 
 		// Keep track of the size of the array
 		unsigned int pSize = 0;
@@ -84,6 +82,7 @@ namespace ml
 				}
 				pArray = temp;
 			}
+
 			// We have space to add new values to our existing array.
 			pArray[pTop].key = key;
 			pArray[pTop].value = NULL;
@@ -100,46 +99,77 @@ namespace ml
 
 			inline bool compare(const Iterator& comp)
 			{
-				return pMap.pArray[pIndex].key == comp.pMap.pArray[comp.pIndex].key &&
-					pMap.pArray[pIndex].value == comp.pMap.pArray[comp.pIndex].value;
+				return &(pMap.pArray[pIndex].key)== &(comp.pMap.pArray[comp.pIndex].key) &&
+					&(pMap.pArray[pIndex].value) == &(comp.pMap.pArray[comp.pIndex].value);
 			}
 
 			// Hide the invalid default constructor
 			Iterator() { /* Empty */ }
 		public:
 
-			K first = pMap.pArray[pIndex].key;
-			V second = pMap.pArray[pIndex].value;
+			K first		= pMap.pArray[pIndex].key;
+			V second	= pMap.pArray[pIndex].value;
+			int index	= pIndex;	// Don't expose our actual pIndex incase the user attemps to change it!
 
-			Iterator(Map& map) :pMap(map) { /* Empty */ };
-			Iterator(Map& map, int idx) :pMap(map)
+			Iterator(Map& map) : pMap(map) { /* Empty */ };
+			Iterator(Map& map, int idx) : pMap(map)
 			{
-				pIndex = idx;
-				first = pMap.pArray[pIndex].key;
-				second = pMap.pArray[pIndex].value;
+				pIndex	= idx;
+				first	= pMap.pArray[pIndex].key;
+				second	= pMap.pArray[pIndex].value;
+				index	= pIndex;
 			};
 
 			~Iterator() { /*Empty*/ }
 
 			// Operator overloads
+
+			// Overload ++ prefix
 			Iterator& operator++()
 			{
 				// Update our variables
 				pIndex++;
-				first = pMap.pArray[pIndex].key;
-				second = pMap.pArray[pIndex].value;
+				first	= pMap.pArray[pIndex].key;
+				second	= pMap.pArray[pIndex].value;
+				index	= pIndex;
 
 				return *this;
 			}
 
+			// Overload ++ postfix
+			Iterator& operator++ (int)
+			{
+				// Make a copy to return
+				Iterator retVal(*this);
+
+				// Call the prefix to do the work
+				++(*this);
+
+				return retVal;
+			}
+
+			// Overload -- prefix
 			Iterator& operator--()
 			{
 				// Update our variables
 				pIndex--;
-				first = pMap.pArray[pIndex].key;
-				second = pMap.pArray[pIndex].value;
+				first	= pMap.pArray[pIndex].key;
+				second	= pMap.pArray[pIndex].value;
+				index	= pIndex;
 
 				return *this;
+			}
+
+			// Overload -- postfix
+			Iterator& operator-- (int)
+			{
+				// Make a copy to return
+				Iterator retVal(*this);
+
+				// Call the prefix to do the work
+				--(*this);
+
+				return retVal;
 			}
 
 			inline bool operator==(const Iterator& comp)
@@ -173,7 +203,7 @@ namespace ml
 		/////////////////////////////////////////////
 
 		// Operator overload to assign a value with []
-		V& operator[](K key)
+		V& operator[] (K key)
 		{
 			return insert(key);
 		}
@@ -297,7 +327,7 @@ namespace ml
 			pArray = temp;
 		}
 
-		// Swawp the value of two keys
+		// Swap the value of two keys
 		void swap(K key1, K key2)
 		{
 			int temp = at(key1);
