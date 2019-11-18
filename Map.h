@@ -1,5 +1,6 @@
 #ifndef __MAP_H
 #define __MAP_H
+#include <iostream>
 
 namespace ml
 {
@@ -35,13 +36,14 @@ namespace ml
 		unsigned int pMaxIncrease = 512;
 
 
-		V& insert(K key)
+		V& insert(K& key)
 		{
 			if (pSize > 0)
 			{
 				for (int idx = 0; idx < pTop; idx++)
 				{
-					if (pArray[idx].key == key)
+					std::cout << &(pArray[idx].key) << " == " << &(key) << std::endl;
+					if (&(pArray[idx].key) == &(key))
 					{
 						return pArray[idx].value;
 					}
@@ -103,6 +105,13 @@ namespace ml
 					&(pMap.pArray[pIndex].value) == &(comp.pMap.pArray[comp.pIndex].value);
 			}
 
+			void update()
+			{
+				first = pMap.pArray[pIndex].key;
+				second = pMap.pArray[pIndex].value;
+				index = pIndex;
+			}
+
 			// Hide the invalid default constructor
 			Iterator() { /* Empty */ }
 		public:
@@ -115,9 +124,7 @@ namespace ml
 			Iterator(Map& map, int idx) : pMap(map)
 			{
 				pIndex	= idx;
-				first	= pMap.pArray[pIndex].key;
-				second	= pMap.pArray[pIndex].value;
-				index	= pIndex;
+				update();
 			};
 
 			~Iterator() { /*Empty*/ }
@@ -129,9 +136,7 @@ namespace ml
 			{
 				// Update our variables
 				pIndex++;
-				first	= pMap.pArray[pIndex].key;
-				second	= pMap.pArray[pIndex].value;
-				index	= pIndex;
+				update();
 
 				return *this;
 			}
@@ -153,9 +158,7 @@ namespace ml
 			{
 				// Update our variables
 				pIndex--;
-				first	= pMap.pArray[pIndex].key;
-				second	= pMap.pArray[pIndex].value;
-				index	= pIndex;
+				update();
 
 				return *this;
 			}
@@ -203,13 +206,13 @@ namespace ml
 		/////////////////////////////////////////////
 
 		// Operator overload to assign a value with []
-		V& operator[] (K key)
+		V& operator[] (K& key)
 		{
 			return insert(key);
 		}
 
 		// Assign a value with the at function as opposed to []
-		V& at(K key)
+		V& at(K& key)
 		{
 			return insert(key);
 		}
