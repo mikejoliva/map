@@ -3,6 +3,7 @@
 
 namespace ml
 {
+	/** Structure to store the key & value pairs */
 	template <typename K, typename V> struct Pair
 	{
 		K key;
@@ -10,7 +11,7 @@ namespace ml
 		const K* address;
 
 		Pair() { /** Empty */ }
-		Pair(K& key, V& value)
+		Pair(const K& key, const V& value)
 		{
 			this->address	= &key;
 			this->key		= key;
@@ -49,9 +50,9 @@ namespace ml
 		{
 			if (pSize > 0)
 			{
-				for (int idx = 0; idx < pTop; idx++)
+				for (unsigned int idx = 0; idx < pTop; idx++)
 				{
-					if (pArray[idx].address == &key)
+					if (pArray[idx].address == &key || pArray[idx].key == key)
 					{
 						return pArray[idx].value;
 					}
@@ -83,15 +84,23 @@ namespace ml
 				{
 					newSize = pMaxIncrease;
 				}
-
 				pSize += newSize;
-				Pair<K, V>* temp = new Pair<K, V>[pSize];
+
+				Pair<K, V>* temp;
+				/** Try to create our new array without running out of memeory */
+				try {
+					temp = new Pair<K, V>[pSize];
+				}
+				catch (std::bad_alloc& ex) {
+					throw ex;
+				}
+					
 
 				/** Check we have any values to copy */
 				if (pTop > 0)
 				{
 					/** Copy old values into our new array */
-					for (int idx = 0; idx < pTop; idx++)
+					for (unsigned int idx = 0; idx < pTop; idx++)
 					{
 						temp[idx] = pArray[idx];
 					}
@@ -105,6 +114,7 @@ namespace ml
 			pArray[pTop].address	= &key;
 			pArray[pTop].value		= NULL;
 
+			/** Increment our counter to the next free space */
 			pTop++;
 		}
 
@@ -114,12 +124,11 @@ namespace ml
 		{
 		private:
 			Map& pMap;
-			int pIndex = 0;
+			unsigned int pIndex = 0;
 
 			inline bool compare(const Iterator& comp)
 			{
-				return	(pMap.pArray[pIndex].address == comp.pMap.pArray[comp.pIndex].address) &&
-						(&(pMap.pArray[pIndex].value) == &(comp.pMap.pArray[comp.pIndex].value));
+				return	pMap.pArray[pIndex].address == comp.pMap.pArray[comp.pIndex].address;
 			}
 
 			void update()
@@ -191,6 +200,8 @@ namespace ml
 				return retVal;
 			}
 
+			/** Overload comparison operators */
+
 			inline bool operator== (const Iterator& comp)
 			{
 				return compare(comp);
@@ -252,9 +263,12 @@ namespace ml
 		/** Set the array size to the exact size of the map */
 		void wrap()
 		{
+			// Return if empty
+			if (pTop == 0) { return; }
+
 			pSize = pTop;
 
-			Pair<K, V>* temp = new Pair<K, V>[pSize];
+			Pair<K, V>* temp = new Pair<K, V>[pSize]();
 
 			// Check we have any values to copy
 			if (pTop > 0)
@@ -269,8 +283,11 @@ namespace ml
 			pArray = temp;
 		}
 
-
-		/** Change the maximum size an array can increase */
+		/**
+		* @param newIncrease new maximum array increase size
+		*
+		* Change the maximum size an array can increase
+		*/
 		void setMaxIncrease(unsigned int newIncrease)
 		{
 			pMaxIncrease = newIncrease;
@@ -303,8 +320,12 @@ namespace ml
 			pSize = 0;
 		}
 
-		/** Removes a key & value pair from the array */
-		void remove(K& key)
+		/**
+		* @param key to be removed
+		*
+		* Remove a key & value pair from the map
+		*/
+		void remove(const K& key)
 		{
 			if (pSize == 0) { return; }
 
@@ -319,10 +340,14 @@ namespace ml
 
 			Pair<K, V>* temp = new Pair<K, V>[pSize];
 
-			int newIdx = 0;
-			for (int oldIdx = 0; oldIdx < pTop; oldIdx++, newIdx++)
+			unsigned int newIdx = 0;
+			for (unsigned int oldIdx = 0; oldIdx < pTop; oldIdx++, newIdx++)
 			{
-				if (pArray[oldIdx].address != &key)
+				/** 
+				* Lets copy across our old array into the new one -
+				* unless the current key is the one we want to remove
+				*/
+				if (pArray[oldIdx].address != &key && pArray[oldIdx].key != key)
 				{
 					temp[newIdx] = pArray[oldIdx];
 				} else {
@@ -335,32 +360,60 @@ namespace ml
 			pArray = temp;
 		}
 
-		/** Swap the value of two keys */
-		void swap(K& key1, K& key2)
+		/**
+		* @param Pair struct to be removed from the map
+		* 
+		* Remove a key and value pair from the map 
+		*/
+		void remove(Pair<K, V> pair)
 		{
-			int temp = insert(key1);
+			remove(pair.key);
+		}
+
+		/**
+		* @param key1 first value to find
+		* @param key2 second value to find
+		*
+		* Swap the values of key1 and key2
+		*/
+		void swap(const K& key1, const K& key2)
+		{
+			V temp = insert(key1);
 			insert(key1) = insert(key2);
 			insert(key2) = temp;
 		}
 
-		/** Take the pair struct as an arguments and insert into our array */
-		void insert(Pair<K, V> newPair)
+		/**
+		* @param pair to be inserted
+		*
+		* Take the pair struct as an arguments and insert into our array
+		*/
+		void insert(Pair<K, V>& pair)
 		{
-			insert(newPair.key) = newPair.value;
+			insert(pair.key) = pair.value;
 		}
 
-		/** Insert a new map pair by taking the key and value in their raw form */
-		void emplace(K& key, V value)
+		/**
+		* @param key to be inserted
+		* @param value to be inserted
+		* 
+		* Insert a new map pair by taking the key and value in their raw form
+		*/
+		void emplace(const K& key, V value)
 		{
 			insert(key) = value;
 		}
 
-		/** Return an iterator to a given key, or the last key if it cannot be found */
-		Iterator find(K& key)
+		/**
+		* @param key to find
+		*
+		* Return an iterator to a given key, or the last key if it cannot be found
+		*/
+		Iterator find(const K& key)
 		{
-			for (int idx = 0; idx < pTop; idx++)
+			for (unsigned int idx = 0; idx < pTop; idx++)
 			{
-				if (pArray[idx].key == key)
+				if (pArray[idx].address == &key || pArray[idx].key == key)
 				{
 					return Iterator(*this, idx);
 				}
@@ -368,12 +421,16 @@ namespace ml
 			return end();
 		}
 
-		/** Return if a key exists in the map */
-		bool exists(K& key)
+		/**
+		* @param key to find
+		*
+		* Return if a key exists in the map
+		*/
+		bool exists(const K& key)
 		{
 			for (int idx = 0; idx < pTop; idx++)
 			{
-				if (pArray[idx].key == key)
+				if (pArray[idx].address == &key || pArray[idx].key == key)
 				{
 					return true;
 				}
